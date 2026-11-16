@@ -1,0 +1,10 @@
+# Earlier assessment of the same organization, used to test the progress comparison.
+earlier:
+  organization: Acme Agency
+  domain:
+  participants: 3
+  answers: {}
+  checks: []
+  result: {"overall": 40, "survey": {"score": 40, "categories": [{"id": "accounts", "name": "Contas e senhas", "score": 30}]}, "checks": {"score": null}, "action_plan": []}
+  overall_score: 40
+  created_at: <%= 30.days.ago.to_fs(:db) %>

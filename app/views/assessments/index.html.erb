@@ -1,0 +1,37 @@
+<% content_for :title, "Avaliações · Diagnóstico de Segurança" %>
+
+<section class="page-header">
+  <div>
+    <h1>Avaliações</h1>
+    <p class="muted">Cada avaliação combina o questionário respondido com a equipe e verificações automáticas do domínio. Repita a avaliação depois das melhorias para medir a evolução.</p>
+  </div>
+  <%= link_to "Nova avaliação", new_assessment_path, class: "button" %>
+</section>
+
+<% if @assessments.empty? %>
+  <div class="empty-state">
+    <h2>Nenhuma avaliação ainda</h2>
+    <p>Comece pelo questionário com a equipe. A verificação técnica do domínio é opcional e só deve ser feita com autorização por escrito.</p>
+    <%= link_to "Fazer a primeira avaliação", new_assessment_path, class: "button" %>
+  </div>
+<% else %>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>Empresa</th><th>Data</th><th>Domínio</th><th class="num">Nota</th><th>Nível</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% @assessments.each do |assessment| %>
+          <tr>
+            <td><%= link_to assessment.organization, assessment %></td>
+            <td><%= format_datetime(assessment.created_at) %></td>
+            <td><%= assessment.domain.presence || "-" %></td>
+            <td class="num"><span class="pill <%= score_class(assessment.overall_score) %>"><%= assessment.overall_score %></span></td>
+            <td><%= assessment.level&.dig("name") %></td>
+            <td class="row-actions"><%= link_to "Ver relatório", assessment %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

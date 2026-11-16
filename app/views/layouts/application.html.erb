@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <title><%= content_for(:title) || "Diagnóstico de Segurança" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="application-name" content="Diagnóstico de Segurança">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <%= link_to root_path, class: "brand" do %>
+          <span class="brand__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span>
+          Diagnóstico de Segurança Digital
+        <% end %>
+        <nav class="topbar__nav">
+          <%= link_to "Avaliações", assessments_path %>
+          <%= link_to "Nova avaliação", new_assessment_path, class: "button button--small" %>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <% if notice %><p class="notice" role="status"><%= notice %></p><% end %>
+      <%= yield %>
+    </main>
+
+    <footer class="footer">
+      Projeto de extensão · Engenharia de Software · ODS 8 - Trabalho Decente e Crescimento Econômico
+    </footer>
+  </body>
+</html>

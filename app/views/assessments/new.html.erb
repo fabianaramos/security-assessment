@@ -1,0 +1,74 @@
+<% content_for :title, "Nova avaliação · Diagnóstico de Segurança" %>
+
+<section class="page-header">
+  <div>
+    <h1>Nova avaliação</h1>
+    <p class="muted">Responda junto com a equipe. Em caso de dúvida, marque "Não sei": isso também aparece no relatório e indica o que precisa ser verificado.</p>
+  </div>
+</section>
+
+<%= form_with model: @assessment, class: "form", data: { controller: "survey" } do |f| %>
+  <% if @assessment.errors.any? %>
+    <div class="errors" role="alert">
+      <strong>Não foi possível gerar o diagnóstico:</strong>
+      <ul><% @assessment.errors.each do |error| %><li><%= error.message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <fieldset class="card">
+    <legend>Identificação</legend>
+    <div class="field-grid">
+      <div class="field">
+        <%= f.label :organization, "Empresa" %>
+        <%= f.text_field :organization, required: true, placeholder: "Ex.: Minha Agência" %>
+      </div>
+      <div class="field">
+        <%= f.label :participants, "Pessoas que participaram" %>
+        <%= f.number_field :participants, min: 1, placeholder: "Ex.: 3" %>
+      </div>
+    </div>
+    <div class="field">
+      <%= f.label :notes, "Observações (opcional)" %>
+      <%= f.text_area :notes, rows: 2, placeholder: "Contexto da aplicação, quem respondeu, combinados com a equipe…" %>
+    </div>
+  </fieldset>
+
+  <% Survey.by_category.each do |category, questions| %>
+    <fieldset class="card">
+      <legend><%= Survey::CATEGORIES[category] %></legend>
+      <% questions.each do |question| %>
+        <div class="question" role="radiogroup" aria-labelledby="<%= question.id %>_text">
+          <p id="<%= question.id %>_text" class="question__text"><%= question.text %></p>
+          <div class="options">
+            <% Survey::OPTIONS.each do |value, label| %>
+              <label class="option option--<%= value %>">
+                <%= radio_button_tag "answers[#{question.id}]", value, @assessment.answers[question.id] == value,
+                      required: true, data: { action: "change->survey#count" } %>
+                <span><%= label %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </fieldset>
+  <% end %>
+
+  <fieldset class="card">
+    <legend>Verificação técnica do domínio (opcional)</legend>
+    <p class="muted">Lê apenas informações públicas: a página inicial, o certificado HTTPS e os registros DNS de e-mail (SPF, DMARC, DKIM). Não faz varredura de portas nem testes de invasão.</p>
+    <div class="field">
+      <%= f.label :domain, "Domínio da empresa" %>
+      <%= f.text_field :domain, placeholder: "Ex.: minhaagencia.com.br", autocomplete: "off", inputmode: "url" %>
+    </div>
+    <label class="consent">
+      <%= f.check_box :authorized %>
+      <span>Tenho autorização por escrito do responsável pela empresa para verificar este domínio.</span>
+    </label>
+  </fieldset>
+
+  <div class="submit-bar">
+    <span class="muted" data-survey-target="progress" data-total="<%= Survey::QUESTIONS.size %>"></span>
+    <%= f.submit "Gerar diagnóstico", class: "button",
+          data: { turbo_submits_with: "Analisando… (pode levar até 20 s)" } %>
+  </div>
+<% end %>

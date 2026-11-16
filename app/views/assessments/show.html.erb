@@ -1,0 +1,133 @@
+<% content_for :title, "#{@assessment.organization} · Relatório de segurança" %>
+<% previous = @assessment.previous %>
+<% actions_by_priority = @assessment.action_plan.group_by { _1["priority"] } %>
+
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Relatório de diagnóstico de segurança digital</p>
+    <h1><%= @assessment.organization %></h1>
+    <p class="muted">
+      <%= format_datetime(@assessment.created_at) %>
+      <% if @assessment.domain.present? %> · domínio <strong><%= @assessment.domain %></strong><% end %>
+      <% if @assessment.participants %> · <%= @assessment.participants %> participantes<% end %>
+    </p>
+  </div>
+  <div class="actions no-print" data-controller="print">
+    <button type="button" class="button" data-action="print#print">Imprimir / salvar PDF</button>
+    <%= link_to "Repetir avaliação", new_assessment_path(repeat: @assessment.id), class: "button button--secondary" %>
+  </div>
+</section>
+
+<section class="summary">
+  <div class="card scorecard <%= score_class(@assessment.overall_score) %>">
+    <p class="scorecard__label">Nota geral</p>
+    <p class="scorecard__value"><%= @assessment.overall_score %><span>/100</span></p>
+    <p class="scorecard__level"><%= @assessment.level&.dig("name") %></p>
+    <p class="muted"><%= @assessment.level&.dig("description") %></p>
+  </div>
+
+  <div class="card subscores">
+    <dl>
+      <div>
+        <dt>Questionário (práticas da equipe)</dt>
+        <dd><%= @assessment.survey_score || "-" %> <%= score_delta(@assessment.survey_score, previous&.survey_score) %></dd>
+      </div>
+      <div>
+        <dt>Verificação técnica do domínio</dt>
+        <dd><%= @assessment.checks_score || "não realizada" %> <%= score_delta(@assessment.checks_score, previous&.checks_score) %></dd>
+      </div>
+      <div>
+        <dt>Ações recomendadas</dt>
+        <dd><%= @assessment.action_plan.size %> <span class="muted">(<%= actions_by_priority.fetch("high", []).size %> de prioridade alta)</span></dd>
+      </div>
+    </dl>
+    <% if previous %>
+      <p class="comparison">
+        Comparado à avaliação de <%= link_to format_datetime(previous.created_at), previous %>:
+        nota geral <%= previous.overall_score %> → <%= @assessment.overall_score %> <%= score_delta(@assessment.overall_score, previous.overall_score) %>
+      </p>
+    <% end %>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Nota por área</h2>
+  <ul class="bars">
+    <% @assessment.categories.each do |category| %>
+      <li class="bar">
+        <span class="bar__name"><%= category["name"] %></span>
+        <span class="bar__track" role="img" aria-label="<%= category["name"] %>: <%= category["score"] %> de 100">
+          <span class="bar__fill <%= score_class(category["score"]) %>" style="width: <%= category["score"].to_i %>%"></span>
+        </span>
+        <span class="bar__score"><%= category["score"] || "-" %> <%= score_delta(category["score"], previous&.category_score(category["id"])) %></span>
+      </li>
+    <% end %>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Plano de ação</h2>
+  <% if @assessment.action_plan.empty? %>
+    <p>Nenhuma ação pendente. Mantenha a rotina e repita o diagnóstico a cada 6 meses.</p>
+  <% else %>
+    <p class="muted">Ordenado por impacto: comece pelas ações de prioridade alta.</p>
+    <% ApplicationHelper::PRIORITY_LABELS.each do |priority, label| %>
+      <% next if actions_by_priority[priority].blank? %>
+      <h3 class="priority priority--<%= priority %>"><%= label %> <span>(<%= actions_by_priority[priority].size %>)</span></h3>
+      <ol class="action-list">
+        <% actions_by_priority[priority].each do |action| %>
+          <li>
+            <p class="action-list__recommendation"><%= action["recommendation"] %></p>
+            <p class="action-list__source"><%= status_badge(action["status"]) %> <span><%= action["category"] %>: <%= action["title"] %></span></p>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
+  <% end %>
+</section>
+
+<% if @assessment.checks.any? %>
+  <section class="card">
+    <h2>Verificação técnica · <%= @assessment.domain %></h2>
+    <% @assessment.checks.group_by { _1["group"] }.each do |group, checks| %>
+      <h3><%= group %></h3>
+      <ul class="check-list">
+        <% checks.each do |check| %>
+          <li>
+            <%= status_badge(check["status"]) %>
+            <div>
+              <p class="check-list__title"><%= check["title"] %></p>
+              <p class="muted"><%= check["detail"] %></p>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>
+
+<section class="card">
+  <h2>Respostas do questionário</h2>
+  <% Survey.by_category.each do |category, questions| %>
+    <h3><%= Survey::CATEGORIES[category] %></h3>
+    <ul class="answer-list">
+      <% questions.each do |question| %>
+        <li><%= status_badge(@assessment.answers[question.id]) %> <span><%= question.text %></span></li>
+      <% end %>
+    </ul>
+  <% end %>
+  <% if @assessment.notes.present? %>
+    <h3>Observações</h3>
+    <%= simple_format(@assessment.notes) %>
+  <% end %>
+</section>
+
+<section class="methodology">
+  <h2>Como a nota é calculada</h2>
+  <p>Cada pergunta e cada verificação têm peso de 1 a 3, conforme o impacto do risco. "Sim"/OK vale 100%, "Em parte"/Atenção vale 50%, e "Não", "Não sei" ou Falha valem 0%. A nota geral combina 60% do questionário e 40% da verificação técnica. As verificações são passivas: leem apenas informações públicas do domínio (página inicial, certificado HTTPS e registros DNS), sem varredura nem testes de invasão.</p>
+</section>
+
+<div class="no-print danger-zone">
+  <%= button_to "Excluir esta avaliação", @assessment, method: :delete, class: "button button--danger button--small",
+        form: { data: { turbo_confirm: "Excluir esta avaliação? Isso não pode ser desfeito." } } %>
+</div>
